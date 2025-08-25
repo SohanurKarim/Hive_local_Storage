@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/adapters.dart';
 import 'package:intl/intl.dart';
@@ -16,10 +20,187 @@ class _ExampleState extends State<Example> {
   final TextEditingController _controller = TextEditingController();
   final TextEditingController _updateController = TextEditingController();
 
+  //********Here Coding for Mobile App
+
+  // Banner Ad
+  BannerAd? _bannerAd;
+  bool _isBannerAdReady = false;
+
+  // Interstitial Ad
+  InterstitialAd? _interstitialAd;
+
+  // Rewarded Ad
+  RewardedAd? _rewardedAd;
+
+  // Counter to switch ads
+  int _adCounter = 0;
+
+  /// ✅ Load Banner Ad
+  void _loadBannerAd() {
+    _bannerAd = BannerAd(
+      adUnitId: "ca-app-pub-3940256099942544/9214589741", // Here Replace real Ad Unit ID
+      request: const AdRequest(),
+      size: AdSize.banner,
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          setState(() {
+            _isBannerAdReady = true;
+          });
+        },
+        onAdFailedToLoad: (ad, err) {
+          debugPrint('Failed to load Banner Ad: ${err.message}');
+          ad.dispose();
+        },
+      ),
+    )..load();
+  }
+  /// ✅ Load Interstitial Ad
+  void _loadInterstitialAd() {
+    InterstitialAd.load(
+      adUnitId: "ca-app-pub-3940256099942544/1033173712", // Replace with your real Ad Unit ID
+      request: const AdRequest(),
+      adLoadCallback: InterstitialAdLoadCallback(
+        onAdLoaded: (ad) {
+          _interstitialAd = ad;
+        },
+        onAdFailedToLoad: (err) {
+          debugPrint('Failed to load Interstitial Ad: ${err.message}');
+        },
+      ),
+    );
+  }
+
+  /// ✅ Show Interstitial Ad
+  void _showInterstitialAd() {
+    if (_interstitialAd != null) {
+      _interstitialAd!.show();
+      _interstitialAd = null;
+      _loadInterstitialAd(); // Load next one
+    }
+  }
+
+  /// ✅ Load Rewarded Ad
+  void _loadRewardedAd() {
+    RewardedAd.load(
+      adUnitId: "ca-app-pub-3940256099942544/5224354917", // Replace with your real Ad Unit ID
+      request: const AdRequest(),
+      rewardedAdLoadCallback: RewardedAdLoadCallback(
+        onAdLoaded: (ad) {
+          _rewardedAd = ad;
+        },
+        onAdFailedToLoad: (err) {
+          debugPrint('Failed to load Rewarded Ad: ${err.message}');
+        },
+      ),
+    );
+  }
+
+  /// ✅ Show Rewarded Ad
+  void _showRewardedAd() {
+    if (_rewardedAd != null) {
+      _rewardedAd!.show(
+        onUserEarnedReward: (ad, reward) {
+          debugPrint('User earned reward: ${reward.amount} ${reward.type}');
+        },
+      );
+      _rewardedAd = null;
+      _loadRewardedAd(); // Load next one
+    }
+  }
+
+  //When Add New Not button first save data then show add alternately
+  void _showAd() {
+    _adCounter++;
+
+    if (_adCounter % 2 == 1) {
+      // Odd = Interstitial
+      if (_interstitialAd != null) {
+        _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
+          onAdDismissedFullScreenContent: (ad) {
+            ad.dispose();
+            _loadInterstitialAd(); // load next
+          },
+          onAdFailedToShowFullScreenContent: (ad, error) {
+            ad.dispose();
+            _loadInterstitialAd();
+          },
+        );
+        _interstitialAd!.show();
+        _interstitialAd = null;
+      }
+    } else {
+      // Even = Rewarded
+      if (_rewardedAd != null) {
+        _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
+          onAdDismissedFullScreenContent: (ad) {
+            ad.dispose();
+            _loadRewardedAd(); // load next
+          },
+          onAdFailedToShowFullScreenContent: (ad, error) {
+            ad.dispose();
+            _loadRewardedAd();
+          },
+        );
+        _rewardedAd!.show(
+          onUserEarnedReward: (ad, reward) {
+            debugPrint("User earned: ${reward.amount} ${reward.type}");
+          },
+        );
+        _rewardedAd = null;
+      }
+    }
+  }
+
+
+  //Here Add Dispose
+  @override
+  void dispose() {
+    _bannerAd?.dispose();
+    _interstitialAd?.dispose();
+    _rewardedAd?.dispose();
+    super.dispose();
+  }
+
+
   @override
   void initState() {
     super.initState();
+    _loadBannerAd();
+    _loadInterstitialAd();
+    _loadRewardedAd();
     notepad = Hive.box('notepad');
+  }
+
+  void _showAboutDialog(BuildContext context) {
+    showAboutDialog(
+      context: context,
+      applicationName: "Notepad++",
+      applicationVersion: "1.0.0",
+      applicationIcon: Icon(Icons.note, color: Colors.green),
+      children: [
+        Text("This is a simple Notepad app built with Flutter."),
+      ],
+    );
+  }
+
+  void _exitApp(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Exit App?"),
+        content: Text("Are you sure you want to exit?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => exit(0), // Force exit app
+            child: Text("Exit", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -30,6 +211,39 @@ class _ExampleState extends State<Example> {
         title: Text('Notepad++', style: TextStyle(color: Colors.white)),
         automaticallyImplyLeading: false,
         backgroundColor: Colors.green,
+      ),
+      drawer: Drawer(
+        child: Column(
+          children: [
+            UserAccountsDrawerHeader(
+              decoration: BoxDecoration(color: Colors.green),
+              accountName: Text("Md. Sohanur Karim"),
+              accountEmail: Text("sohanur@example.com"),
+              currentAccountPicture: CircleAvatar(
+                backgroundColor: Colors.white,
+                child: Icon(Icons.person, size: 40, color: Colors.green),
+              ),
+            ),
+
+            ListTile(
+              leading: Icon(Icons.info, color: Colors.green),
+              title: Text("About"),
+              onTap: () {
+                Navigator.pop(context);
+                _showAboutDialog(context);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.exit_to_app, color: Colors.red),
+              title: Text("Exit"),
+              onTap: () {
+                Navigator.pop(context);
+                _exitApp(context);
+              },
+            ),
+
+          ],
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.only(left: 20, right: 20, top: 50),
@@ -60,6 +274,8 @@ class _ExampleState extends State<Example> {
 
                     _controller.clear();
                     Fluttertoast.showToast(msg: 'Added successfully');
+                   // _showInterstitialAd();
+                    _showAd();
                   } catch (e) {
                     Fluttertoast.showToast(msg: e.toString());
                   }
@@ -72,8 +288,17 @@ class _ExampleState extends State<Example> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: Text("Add new data"),
+                child: Text("Add new note"),
               ),
+              // ElevatedButton(
+              //   onPressed: _showInterstitialAd,
+              //   child: const Text("Show Interstitial Ad"),
+              // ),
+              // const SizedBox(height: 16),
+              // ElevatedButton(
+              //   onPressed: _showRewardedAd,
+              //   child: const Text("Show Rewarded Ad"),
+              // ),
             ),
 
             // Notes list
@@ -120,6 +345,12 @@ class _ExampleState extends State<Example> {
           ],
         ),
       ),
+      bottomNavigationBar: _isBannerAdReady
+          ? SizedBox(
+        height: _bannerAd!.size.height.toDouble(),
+        child: AdWidget(ad: _bannerAd!),
+      )
+          : null,
     );
   }
 

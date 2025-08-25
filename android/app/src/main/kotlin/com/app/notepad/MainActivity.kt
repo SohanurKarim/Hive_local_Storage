@@ -1,4 +1,4 @@
-package com.example.hive_d
+package com.app.notepad
 
 import io.flutter.embedding.android.FlutterActivity
 
