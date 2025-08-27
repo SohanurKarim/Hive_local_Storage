@@ -5,6 +5,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'package:hive/hive.dart';
+import 'package:hive_d/user_model.dart';
 import 'package:hive_flutter/adapters.dart';
 import 'package:intl/intl.dart';
 
@@ -20,7 +21,7 @@ class _ExampleState extends State<Example> {
   final TextEditingController _controller = TextEditingController();
   final TextEditingController _updateController = TextEditingController();
 
-  //********Here Coding for Mobile App
+  //********Here Coding for Mobile Add
 
   // Banner Ad
   BannerAd? _bannerAd;
@@ -151,26 +152,7 @@ class _ExampleState extends State<Example> {
     }
   }
 
-
-  //Here Add Dispose
-  @override
-  void dispose() {
-    _bannerAd?.dispose();
-    _interstitialAd?.dispose();
-    _rewardedAd?.dispose();
-    super.dispose();
-  }
-
-
-  @override
-  void initState() {
-    super.initState();
-    _loadBannerAd();
-    _loadInterstitialAd();
-    _loadRewardedAd();
-    notepad = Hive.box('notepad');
-  }
-
+  //Here coding for Drawer
   void _showAboutDialog(BuildContext context) {
     showAboutDialog(
       context: context,
@@ -203,28 +185,108 @@ class _ExampleState extends State<Example> {
     );
   }
 
+
+  //Here Add Dispose
+  @override
+  void dispose() {
+    _bannerAd?.dispose();
+    _interstitialAd?.dispose();
+    _rewardedAd?.dispose();
+    super.dispose();
+  }
+
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBannerAd();
+    _loadInterstitialAd();
+    _loadRewardedAd();
+    notepad = Hive.box('notepad');
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
         title: Text('Notepad++', style: TextStyle(color: Colors.white)),
-        automaticallyImplyLeading: false,
+       // automaticallyImplyLeading: false,
         backgroundColor: Colors.green,
+        iconTheme: IconThemeData(color: Colors.white),
       ),
       drawer: Drawer(
         child: Column(
           children: [
             UserAccountsDrawerHeader(
               decoration: BoxDecoration(color: Colors.green),
-              accountName: Text("Md. Sohanur Karim"),
-              accountEmail: Text("sohanur@example.com"),
+              accountName: Text(
+                Hive.box<UserModel>('userBox').get('currentUser')?.name ?? "Guest",
+              ),
+              accountEmail: Text(
+                Hive.box<UserModel>('userBox').get('currentUser')?.email ?? "",
+              ),
               currentAccountPicture: CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Icon(Icons.person, size: 40, color: Colors.green),
+                backgroundImage: Hive.box<UserModel>('userBox')
+                    .get('currentUser')
+                    ?.imagePath !=
+                    null
+                    ? FileImage(File(
+                    Hive.box<UserModel>('userBox').get('currentUser')!.imagePath))
+                    : null,
+                child: Hive.box<UserModel>('userBox').get('currentUser')?.imagePath ==
+                    null
+                    ? Icon(Icons.person, size: 40, color: Colors.green)
+                    : null,
               ),
             ),
 
+            // --- Drawer Menu Items ---
+            ListTile(
+              leading: Icon(Icons.home, color: Colors.green),
+              title: Text("Home"),
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.favorite, color: Colors.pink),
+              title: Text("Favorites"),
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.alarm, color: Colors.orange),
+              title: Text("Reminders"),
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.label, color: Colors.blue),
+              title: Text("Tags"),
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.delete, color: Colors.red),
+              title: Text("Trash"),
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.settings, color: Colors.grey),
+              title: Text("Settings"),
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+            Divider(),
             ListTile(
               leading: Icon(Icons.info, color: Colors.green),
               title: Text("About"),
@@ -242,9 +304,39 @@ class _ExampleState extends State<Example> {
               },
             ),
 
+            Spacer(), // pushes footer to bottom
+
+            // --- Footer Logout Button ---
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: Icon(Icons.logout),
+                  label: Text("Logout"),
+                  onPressed: () async {
+                    final userBox = Hive.box<UserModel>('userBox');
+                    await userBox.delete('currentUser'); // clear login
+                    Navigator.pop(context);
+
+                    // Navigate back to login page
+                    Navigator.pushReplacementNamed(context, '/login');
+                  },
+                ),
+              ),
+            ),
           ],
         ),
       ),
+
       body: Padding(
         padding: const EdgeInsets.only(left: 20, right: 20, top: 50),
         child: Column(
@@ -421,6 +513,14 @@ class _ExampleState extends State<Example> {
                             _updateController.clear();
                             Navigator.pop(context);
                           },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                           child: Text('Update'),
                         )
                       ],

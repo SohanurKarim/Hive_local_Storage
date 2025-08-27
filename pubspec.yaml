@@ -35,6 +35,8 @@ dependencies:
   hive_flutter:
   intl:
   google_mobile_ads:
+  image_picker:
+  path_provider:
   flutter_launcher_icons:
   change_app_package_name:
 
@@ -52,6 +54,8 @@ flutter_launcher_icons:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  hive_generator: ^2.0.1
+  build_runner: ^2.3.3
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
